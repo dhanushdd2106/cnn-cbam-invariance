@@ -52,8 +52,16 @@ def evaluate(model, loader):
 # ✅ FIXED Translation (important!)
 def get_translation_transform(shift):
     return transforms.Compose([
-        transforms.Pad(shift),
-        transforms.Lambda(lambda img: TF.crop(img, shift, shift, 28, 28)),
+        transforms.Lambda(
+            lambda img: TF.affine(
+                img,
+                angle=0,
+                translate=(shift, shift),
+                scale=1.0,
+                shear=0,
+                fill=0  # important: background fill
+            )
+        ),
         transforms.ToTensor()
     ])
 
