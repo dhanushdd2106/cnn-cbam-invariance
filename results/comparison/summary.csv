@@ -1,0 +1,7 @@
+type,cnn_accuracy,cbam_accuracy
+original,0.9902,0.9911
+translation_x,0.4274,0.43370000000000003
+translation_y,0.34935,0.33885
+translation_xy,0.24772500000000003,0.24705
+rotation,0.9649833333333334,0.96985
+flip,0.4154,0.4103
