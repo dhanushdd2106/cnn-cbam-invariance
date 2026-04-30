@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from src.models.cbam import CBAM
+from src.models.cbm import CBAM
 
 class CNN_CIFAR_CBAM(nn.Module):
     def __init__(self):
