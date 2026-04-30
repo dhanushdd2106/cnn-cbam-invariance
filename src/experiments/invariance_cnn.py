@@ -1,9 +1,10 @@
 import sys
 import os
 
+# Fix import path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
 import torch
-import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -16,13 +17,15 @@ from src.models.cnn import CNN
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Load model
+# Load trained model
 model = CNN().to(device)
 model.load_state_dict(torch.load("results/models/cnn.pth"))
 model.eval()
 
-# Evaluation function
-def evaluate(model, loader, device):
+# =========================
+# Evaluation Function
+# =========================
+def evaluate(model, loader):
     all_preds, all_labels = [], []
 
     with torch.no_grad():
@@ -42,10 +45,15 @@ def evaluate(model, loader, device):
     return accuracy, precision, recall, f1
 
 
+# =========================
 # Transformations
+# =========================
+
+# ✅ FIXED Translation (important!)
 def get_translation_transform(shift):
     return transforms.Compose([
-        transforms.Lambda(lambda img: TF.affine(img, angle=0, translate=(shift, shift), scale=1.0, shear=0)),
+        transforms.Pad(shift),
+        transforms.Lambda(lambda img: TF.crop(img, shift, shift, 28, 28)),
         transforms.ToTensor()
     ])
 
@@ -67,12 +75,14 @@ rotation_levels = [2, 5, 10, 15, 20, 25]
 
 results = []
 
+# =========================
 # Baseline
+# =========================
 base_transform = transforms.ToTensor()
 dataset = datasets.MNIST("data", train=False, download=True, transform=base_transform)
 loader = DataLoader(dataset, batch_size=64)
 
-acc, prec, rec, f1 = evaluate(model, loader, device)
+acc, prec, rec, f1 = evaluate(model, loader)
 
 results.append({
     "type": "original",
@@ -83,13 +93,17 @@ results.append({
     "f1": f1
 })
 
+
+# =========================
 # Translation
+# =========================
 for shift in translation_levels:
     transform = get_translation_transform(shift)
+
     dataset = datasets.MNIST("data", train=False, download=True, transform=transform)
     loader = DataLoader(dataset, batch_size=64)
 
-    acc, prec, rec, f1 = evaluate(model, loader, device)
+    acc, prec, rec, f1 = evaluate(model, loader)
 
     results.append({
         "type": "translation",
@@ -100,13 +114,17 @@ for shift in translation_levels:
         "f1": f1
     })
 
+
+# =========================
 # Rotation
+# =========================
 for angle in rotation_levels:
     transform = get_rotation_transform(angle)
+
     dataset = datasets.MNIST("data", train=False, download=True, transform=transform)
     loader = DataLoader(dataset, batch_size=64)
 
-    acc, prec, rec, f1 = evaluate(model, loader, device)
+    acc, prec, rec, f1 = evaluate(model, loader)
 
     results.append({
         "type": "rotation",
@@ -117,12 +135,16 @@ for angle in rotation_levels:
         "f1": f1
     })
 
+
+# =========================
 # Flip
+# =========================
 flip_transform = get_flip_transform()
+
 dataset = datasets.MNIST("data", train=False, download=True, transform=flip_transform)
 loader = DataLoader(dataset, batch_size=64)
 
-acc, prec, rec, f1 = evaluate(model, loader, device)
+acc, prec, rec, f1 = evaluate(model, loader)
 
 results.append({
     "type": "flip",
@@ -133,35 +155,57 @@ results.append({
     "f1": f1
 })
 
-# Save results
+
+# =========================
+# Save Results
+# =========================
 os.makedirs("results/metrics", exist_ok=True)
+os.makedirs("results/plots", exist_ok=True)
+
 df = pd.DataFrame(results)
 df.to_csv("results/metrics/invariance_cnn.csv", index=False)
 
 print(df)
 
-# Plot translation
+
+# =========================
+# Plot Translation
+# =========================
 df_t = df[df["type"] == "translation"]
+
 plt.figure()
 plt.plot(df_t["level"], df_t["accuracy"], marker='o')
 plt.title("CNN Translation Invariance")
 plt.xlabel("Shift (pixels)")
 plt.ylabel("Accuracy")
 plt.savefig("results/plots/cnn_translation.png")
+plt.close()
 
-# Plot rotation
+
+# =========================
+# Plot Rotation
+# =========================
 df_r = df[df["type"] == "rotation"]
+
 plt.figure()
 plt.plot(df_r["level"], df_r["accuracy"], marker='o')
 plt.title("CNN Rotation Invariance")
 plt.xlabel("Angle (degrees)")
 plt.ylabel("Accuracy")
 plt.savefig("results/plots/cnn_rotation.png")
+plt.close()
 
-# Plot flip
+
+# =========================
+# Plot Flip
+# =========================
 df_f = df[df["type"] == "flip"]
+
 plt.figure()
 plt.bar(["Flip"], df_f["accuracy"])
 plt.title("CNN Flip Robustness")
 plt.ylabel("Accuracy")
 plt.savefig("results/plots/cnn_flip.png")
+plt.close()
+
+print("All results and plots saved successfully!")
