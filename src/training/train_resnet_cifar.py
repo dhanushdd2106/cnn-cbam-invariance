@@ -1,6 +1,10 @@
 import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+import torchvision.datasets as datasets
 
+# Force alternate mirror
+datasets.CIFAR10.url = "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
+datasets.CIFAR10.filename = "cifar-10-python.tar.gz"
 import torch
 import torch.nn as nn
 import torch.optim as optim
