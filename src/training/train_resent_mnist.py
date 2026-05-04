@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from torchvision import datasets, transforms, models
 from torch.utils.data import DataLoader
@@ -16,27 +17,43 @@ from torch.utils.data import DataLoader
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # =========================
-# Data
+# Config
+# =========================
+BATCH_SIZE = 128
+EPOCHS = 5
+LR = 0.0003
+FREEZE_BACKBONE = True   # 🔥 keep True for speed
+
+# =========================
+# Data (IMPORTANT FIX)
 # =========================
 transform = transforms.Compose([
+    transforms.Resize((224, 224)),             # ResNet input
+    transforms.Grayscale(num_output_channels=3),  # 1 → 3 channels
     transforms.ToTensor(),
-    transforms.Normalize((0.5, 0.5, 0.5),
-                         (0.5, 0.5, 0.5))
+    transforms.Normalize((0.5,)*3, (0.5,)*3)
 ])
 
-train_dataset = datasets.CIFAR10("data", train=True, download=True, transform=transform)
-test_dataset = datasets.CIFAR10("data", train=False, download=True, transform=transform)
+train_dataset = datasets.MNIST("data", train=True, download=True, transform=transform)
+test_dataset = datasets.MNIST("data", train=False, download=True, transform=transform)
 
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=64)
+train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=2, pin_memory=True)
+test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, num_workers=2, pin_memory=True)
 
 # =========================
-# Model (ResNet)
+# Model
 # =========================
 model = models.resnet18(pretrained=True)
 
 # Modify final layer
 model.fc = nn.Linear(model.fc.in_features, 10)
+
+# Freeze backbone (FAST)
+if FREEZE_BACKBONE:
+    for param in model.parameters():
+        param.requires_grad = False
+    for param in model.fc.parameters():
+        param.requires_grad = True
 
 model = model.to(device)
 
@@ -44,19 +61,22 @@ model = model.to(device)
 # Loss & Optimizer
 # =========================
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.0003)
+optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=LR)
 
-epochs = 12
+# Mixed precision
+scaler = torch.cuda.amp.GradScaler()
 
+# =========================
+# Tracking
+# =========================
 train_losses = []
 test_accuracies = []
-
 best_acc = 0
 
 # =========================
 # Training Loop
 # =========================
-for epoch in range(epochs):
+for epoch in range(EPOCHS):
     model.train()
     running_loss = 0
 
@@ -64,11 +84,14 @@ for epoch in range(epochs):
         images, labels = images.to(device), labels.to(device)
 
         optimizer.zero_grad()
-        outputs = model(images)
-        loss = criterion(outputs, labels)
 
-        loss.backward()
-        optimizer.step()
+        with torch.cuda.amp.autocast():
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
 
         running_loss += loss.item()
 
@@ -97,13 +120,24 @@ for epoch in range(epochs):
 
     print(f"Epoch {epoch+1}: Loss={avg_loss:.4f}, Accuracy={acc:.4f}")
 
-    # =========================
-    # Save Best Model
-    # =========================
+    # Save best model
     if acc > best_acc:
         best_acc = acc
         os.makedirs("results/models", exist_ok=True)
-        torch.save(model.state_dict(), "results/models/resnet_cifar.pth")
+        torch.save(model.state_dict(), "results/models/resnet_mnist.pth")
+
+# =========================
+# Save Training Logs
+# =========================
+os.makedirs("results/metrics", exist_ok=True)
+
+df = pd.DataFrame({
+    "epoch": list(range(1, EPOCHS+1)),
+    "loss": train_losses,
+    "accuracy": test_accuracies
+})
+
+df.to_csv("results/metrics/resnet_mnist_training.csv", index=False)
 
 # =========================
 # Save Plots
@@ -112,18 +146,18 @@ os.makedirs("results/plots", exist_ok=True)
 
 plt.figure()
 plt.plot(train_losses)
-plt.title("ResNet CIFAR Loss")
+plt.title("ResNet MNIST Loss")
 plt.xlabel("Epoch")
 plt.ylabel("Loss")
-plt.savefig("results/plots/resnet_cifar_loss.png")
+plt.savefig("results/plots/resnet_mnist_loss.png")
 plt.close()
 
 plt.figure()
 plt.plot(test_accuracies)
-plt.title("ResNet CIFAR Accuracy")
+plt.title("ResNet MNIST Accuracy")
 plt.xlabel("Epoch")
 plt.ylabel("Accuracy")
-plt.savefig("results/plots/resnet_cifar_accuracy.png")
+plt.savefig("results/plots/resnet_mnist_accuracy.png")
 plt.close()
 
-print("✅ ResNet CIFAR training complete!")
+print("✅ ResNet MNIST training complete!")
