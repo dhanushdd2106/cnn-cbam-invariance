@@ -1,0 +1,7 @@
+type,cnn_acc,resnet_acc
+original,0.9902,0.994
+translation_x,0.4274,0.9688
+translation_y,0.34935,0.917725
+translation_xy,0.24772500000000003,0.6977
+rotation,0.9649833333333334,0.9699
+flip,0.4154,0.4784
