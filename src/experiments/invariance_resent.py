@@ -158,5 +158,57 @@ for angle in rotation_levels:
         "f1": f1
     })
 
+# =========================
+# Flip
+# =========================
+dataset = datasets.MNIST("data", train=False, download=True, transform=flip())
+loader = DataLoader(dataset, batch_size=64)
 
+acc, prec, rec, f1 = evaluate(loader)
+
+results.append({
+    "type": "flip",
+    "level": 1,
+    "accuracy": acc,
+    "precision": prec,
+    "recall": rec,
+    "f1": f1
+})
+
+
+# =========================
+# Save Results
+# =========================
+os.makedirs("results/metrics", exist_ok=True)
+os.makedirs("results/plots", exist_ok=True)
+
+df = pd.DataFrame(results)
+df.to_csv("results/metrics/invariance_resnet_mnist.csv", index=False)
+
+print(df)
+
+
+# =========================
+# Plot Results
+# =========================
+for t in ["translation_x", "translation_y", "translation_xy", "rotation"]:
+    plt.figure()
+    sub = df[df["type"] == t]
+    plt.plot(sub["level"], sub["accuracy"], marker='o')
+    plt.title(f"ResNet MNIST - {t}")
+    plt.xlabel("Level")
+    plt.ylabel("Accuracy")
+    plt.savefig(f"results/plots/resnet_mnist_{t}.png")
+    plt.close()
+
+# Flip plot
+flip_acc = df[df["type"] == "flip"]["accuracy"].values[0]
+
+plt.figure()
+plt.bar(["Flip"], [flip_acc])
+plt.title("ResNet MNIST Flip")
+plt.savefig("results/plots/resnet_mnist_flip.png")
+plt.close()
+
+print("✅ ResNet MNIST invariance completed!")
 # =========================
