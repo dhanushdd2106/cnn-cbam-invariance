@@ -4,10 +4,11 @@ sys.path.append(os.getcwd())
 import torch
 import pandas as pd
 
-from torchvision import datasets, transforms, models
+from torchvision import transforms, models
 import torchvision.transforms.functional as TF
 from torch.utils.data import DataLoader
 from sklearn.metrics import precision_score, recall_score, f1_score
+from datasets import load_dataset
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -22,9 +23,38 @@ model = model.to(device)
 model.eval()
 
 # =========================
-# Evaluation Function
+# Base Transform
 # =========================
-def evaluate(loader):
+def base_transform():
+    return transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,)*3, (0.5,)*3)
+    ])
+
+# =========================
+# Custom Dataset Wrapper
+# =========================
+class CIFARWrapper(torch.utils.data.Dataset):
+    def __init__(self, hf_dataset, transform):
+        self.dataset = hf_dataset
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        img = self.dataset[idx]["img"]
+        label = self.dataset[idx]["label"]
+        img = self.transform(img)
+        return img, label
+
+# =========================
+# Evaluation
+# =========================
+def evaluate(dataset, transform):
+    ds = CIFARWrapper(dataset, transform)
+    loader = DataLoader(ds, batch_size=64)
+
     preds, labels_all = [], []
 
     with torch.no_grad():
@@ -44,46 +74,42 @@ def evaluate(loader):
     return acc, prec, rec, f1
 
 # =========================
-# Base Transform
-# =========================
-def base():
-    return transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.5,)*3, (0.5,)*3)
-    ])
-
-# =========================
 # Transformations
 # =========================
 def tx(s):
     return transforms.Compose([
         transforms.Lambda(lambda img: TF.affine(img, 0, (s, 0), 1, 0, fill=0)),
-        *base().transforms
+        *base_transform().transforms
     ])
 
 def ty(s):
     return transforms.Compose([
         transforms.Lambda(lambda img: TF.affine(img, 0, (0, s), 1, 0, fill=0)),
-        *base().transforms
+        *base_transform().transforms
     ])
 
 def txy(s):
     return transforms.Compose([
         transforms.Lambda(lambda img: TF.affine(img, 0, (s, s), 1, 0, fill=0)),
-        *base().transforms
+        *base_transform().transforms
     ])
 
 def rot(a):
     return transforms.Compose([
         transforms.Lambda(lambda img: TF.rotate(img, a)),
-        *base().transforms
+        *base_transform().transforms
     ])
 
 def flip():
     return transforms.Compose([
         transforms.Lambda(lambda img: TF.hflip(img)),
-        *base().transforms
+        *base_transform().transforms
     ])
+
+# =========================
+# Load HF dataset
+# =========================
+hf_dataset = load_dataset("cifar10")["test"]
 
 translation = [2, 5, 8, 10]
 rotation = [2, 5, 10, 15, 20, 25]
@@ -93,10 +119,8 @@ results = []
 # =========================
 # Baseline
 # =========================
-ds = datasets.CIFAR10("data", train=False, download=True, transform=base())
-loader = DataLoader(ds, batch_size=64)
+acc, p, r, f = evaluate(hf_dataset, base_transform())
 
-acc, p, r, f = evaluate(loader)
 results.append({
     "type": "original",
     "level": 0,
@@ -115,10 +139,7 @@ for s in translation:
         ("translation_y", ty),
         ("translation_xy", txy)
     ]:
-        ds = datasets.CIFAR10("data", train=False, download=True, transform=func(s))
-        loader = DataLoader(ds, batch_size=64)
-
-        acc, p, r, f = evaluate(loader)
+        acc, p, r, f = evaluate(hf_dataset, func(s))
 
         results.append({
             "type": name,
@@ -133,10 +154,7 @@ for s in translation:
 # Rotation
 # =========================
 for a in rotation:
-    ds = datasets.CIFAR10("data", train=False, download=True, transform=rot(a))
-    loader = DataLoader(ds, batch_size=64)
-
-    acc, p, r, f = evaluate(loader)
+    acc, p, r, f = evaluate(hf_dataset, rot(a))
 
     results.append({
         "type": "rotation",
@@ -150,10 +168,7 @@ for a in rotation:
 # =========================
 # Flip
 # =========================
-ds = datasets.CIFAR10("data", train=False, download=True, transform=flip())
-loader = DataLoader(ds, batch_size=64)
-
-acc, p, r, f = evaluate(loader)
+acc, p, r, f = evaluate(hf_dataset, flip())
 
 results.append({
     "type": "flip",
@@ -165,7 +180,7 @@ results.append({
 })
 
 # =========================
-# Save Results
+# Save
 # =========================
 os.makedirs("results/metrics", exist_ok=True)
 
