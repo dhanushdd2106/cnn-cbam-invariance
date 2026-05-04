@@ -5,7 +5,7 @@ import os
 # =========================
 # Load Data
 # =========================
-cnn = pd.read_csv("results/metrics/invariance_cnn.csv")
+cnn = pd.read_csv("results/metrics/invariance_full_cnn.csv")
 resnet = pd.read_csv("results/metrics/invariance_resnet_mnist.csv")
 
 # =========================
@@ -14,7 +14,7 @@ resnet = pd.read_csv("results/metrics/invariance_resnet_mnist.csv")
 os.makedirs("results/comparison", exist_ok=True)
 
 # =========================
-# Helper Function
+# Plot Function
 # =========================
 def plot_compare(transform):
     cnn_df = cnn[cnn["type"] == transform]
@@ -36,9 +36,9 @@ def plot_compare(transform):
     plt.close()
 
 # =========================
-# Generate Comparison Plots
+# Transform Comparisons
 # =========================
-for t in ["translation_x", "translation_y", "translation_xy", "rotation"]:
+for t in ["translation", "rotation"]:
     plot_compare(t)
 
 # =========================
@@ -72,7 +72,7 @@ plt.close()
 # =========================
 summary = []
 
-for t in ["original", "translation_x", "translation_y", "translation_xy", "rotation", "flip"]:
+for t in ["original", "translation", "rotation", "flip"]:
     cnn_val = cnn[cnn["type"] == t]["accuracy"].mean()
     res_val = resnet[resnet["type"] == t]["accuracy"].mean()
 
@@ -86,7 +86,7 @@ summary_df = pd.DataFrame(summary)
 summary_df.to_csv("results/comparison/resnet_cnn_mnist_summary.csv", index=False)
 
 # =========================
-# Print Results
+# Print
 # =========================
 print(summary_df)
-print("✅ MNIST CNN vs ResNet comparison completed!")
+print("✅ Final MNIST CNN vs ResNet comparison done!")
