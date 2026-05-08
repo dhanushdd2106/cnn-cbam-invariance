@@ -20,7 +20,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Config
 # =========================
 BATCH_SIZE = 128
-EPOCHS = 5
+EPOCHS = 10
 LR = 0.0003
 FREEZE_BACKBONE = False   # 🔥 keep True for speed
 
