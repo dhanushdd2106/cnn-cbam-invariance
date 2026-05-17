@@ -76,22 +76,35 @@ def get_rotation_transform(angle):
         transforms.ToTensor()
     ])
 
+<<<<<<< HEAD
 def get_hflip_transform():
+=======
+# Horizontal Flip
+def hflip():
+>>>>>>> a77f67c (corrected invariance for mnist)
     return transforms.Compose([
         transforms.Lambda(lambda img: TF.hflip(img)),
         transforms.ToTensor()
     ])
 
+<<<<<<< HEAD
 def get_vflip_transform():
+=======
+# Vertical Flip
+def vflip():
+>>>>>>> a77f67c (corrected invariance for mnist)
     return transforms.Compose([
         transforms.Lambda(lambda img: TF.vflip(img)),
         transforms.ToTensor()
     ])
 
 
+<<<<<<< HEAD
 # =========================
 # Levels
 # =========================
+=======
+>>>>>>> a77f67c (corrected invariance for mnist)
 translation_levels = [
     2,5,8,10,12,15,18,20,
     22,25,28,30,32,35,38,40,
@@ -189,13 +202,20 @@ for angle in rotation_levels:
 # =========================
 # Horizontal Flip
 # =========================
+<<<<<<< HEAD
 hflip_transform = get_hflip_transform()
 
+=======
+>>>>>>> a77f67c (corrected invariance for mnist)
 dataset = datasets.MNIST(
     "data",
     train=False,
     download=True,
+<<<<<<< HEAD
     transform=hflip_transform
+=======
+    transform=hflip()
+>>>>>>> a77f67c (corrected invariance for mnist)
 )
 
 loader = DataLoader(dataset, batch_size=64)
@@ -215,18 +235,29 @@ results.append({
 # =========================
 # Vertical Flip
 # =========================
+<<<<<<< HEAD
 vflip_transform = get_vflip_transform()
 
+=======
+>>>>>>> a77f67c (corrected invariance for mnist)
 dataset = datasets.MNIST(
     "data",
     train=False,
     download=True,
+<<<<<<< HEAD
     transform=vflip_transform
+=======
+    transform=vflip()
+>>>>>>> a77f67c (corrected invariance for mnist)
 )
 
 loader = DataLoader(dataset, batch_size=64)
 
+<<<<<<< HEAD
 acc, prec, rec, f1 = evaluate(model, loader, device)
+=======
+acc, prec, rec, f1 = evaluate(loader)
+>>>>>>> a77f67c (corrected invariance for mnist)
 
 results.append({
     "type": "vertical_flip",
@@ -257,6 +288,7 @@ print(df)
 # =========================
 # Translation Plot
 # =========================
+<<<<<<< HEAD
 df_t = df[df["type"] == "translation"]
 
 plt.figure()
@@ -331,3 +363,60 @@ plt.savefig("results/plots/cnn_vflip.png")
 
 
 print("✅ CNN invariance completed!")
+=======
+plt.figure()
+df[df["type"] == "translation_x"].plot(x="level", y="accuracy", marker='o')
+plt.title("Translation X (CNN)")
+plt.savefig("results/plots/translation_x.png")
+plt.close()
+
+# =========================
+# Plot Translation Y
+# =========================
+plt.figure()
+df[df["type"] == "translation_y"].plot(x="level", y="accuracy", marker='o')
+plt.title("Translation Y (CNN)")
+plt.savefig("results/plots/translation_y.png")
+plt.close()
+
+# =========================
+# Plot Translation XY
+# =========================
+plt.figure()
+df[df["type"] == "translation_xy"].plot(x="level", y="accuracy", marker='o')
+plt.title("Translation XY (CNN)")
+plt.savefig("results/plots/translation_xy.png")
+plt.close()
+
+# =========================
+# Plot Rotation
+# =========================
+plt.figure()
+df[df["type"] == "rotation"].plot(x="level", y="accuracy", marker='o')
+plt.title("Rotation (CNN)")
+plt.savefig("results/plots/rotation.png")
+plt.close()
+
+# =========================
+# Plot Horizontal Flip
+# =========================
+hflip_acc = df[df["type"] == "horizontal_flip"]["accuracy"].values[0]
+
+plt.figure()
+plt.bar(["Horizontal Flip"], [hflip_acc])
+plt.title("Horizontal Flip (CNN)")
+plt.savefig("results/plots/horizontal_flip.png")
+plt.close()
+
+
+# =========================
+# Plot Vertical Flip
+# =========================
+vflip_acc = df[df["type"] == "vertical_flip"]["accuracy"].values[0]
+
+plt.figure()
+plt.bar(["Vertical Flip"], [vflip_acc])
+plt.title("Vertical Flip (CNN)")
+plt.savefig("results/plots/vertical_flip.png")
+plt.close()
+>>>>>>> a77f67c (corrected invariance for mnist)
