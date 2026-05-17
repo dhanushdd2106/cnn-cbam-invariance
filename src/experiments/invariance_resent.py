@@ -124,7 +124,7 @@ results.append({
 # =========================
 # Translation Experiments
 # =========================
-for shift in translation_levels:
+for shift in translation:
     for name, func in [
         ("translation_x", translate_x),
         ("translation_y", translate_y),
@@ -148,7 +148,7 @@ for shift in translation_levels:
 # =========================
 # Rotation
 # =========================
-for angle in rotation_levels:
+for angle in rotation:
     dataset = datasets.MNIST("data", train=False, download=True, transform=rotate(angle))
     loader = DataLoader(dataset, batch_size=64)
 
