@@ -1,10 +1,6 @@
-import sys
-import os
-
-# Fix import path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 import torch
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -17,17 +13,13 @@ from src.models.cnn import CNN
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# =========================
-# Load Model
-# =========================
+# Load model
 model = CNN().to(device)
 model.load_state_dict(torch.load("results/models/cnn.pth"))
 model.eval()
 
-# =========================
-# Evaluation Function
-# =========================
-def evaluate(loader):
+# Evaluation function
+def evaluate(model, loader, device):
     all_preds, all_labels = [], []
 
     with torch.no_grad():
@@ -50,55 +42,71 @@ def evaluate(loader):
 # =========================
 # Transformations
 # =========================
-
-# Horizontal shift
-def translate_x(shift):
+def get_translation_transform(shift):
     return transforms.Compose([
-        transforms.Lambda(lambda img: TF.affine(img, 0, (shift, 0), 1, 0, fill=0)),
+        transforms.Lambda(
+            lambda img: TF.affine(
+                img,
+                angle=0,
+                translate=(shift, shift),
+                scale=1.0,
+                shear=0
+            )
+        ),
         transforms.ToTensor()
     ])
 
-# Vertical shift
-def translate_y(shift):
-    return transforms.Compose([
-        transforms.Lambda(lambda img: TF.affine(img, 0, (0, shift), 1, 0, fill=0)),
-        transforms.ToTensor()
-    ])
-
-# Diagonal shift
-def translate_xy(shift):
-    return transforms.Compose([
-        transforms.Lambda(lambda img: TF.affine(img, 0, (shift, shift), 1, 0, fill=0)),
-        transforms.ToTensor()
-    ])
-
-# Rotation
-def rotate(angle):
+def get_rotation_transform(angle):
     return transforms.Compose([
         transforms.Lambda(lambda img: TF.rotate(img, angle)),
         transforms.ToTensor()
     ])
 
-# Flip
-def flip():
+def get_hflip_transform():
     return transforms.Compose([
         transforms.Lambda(lambda img: TF.hflip(img)),
         transforms.ToTensor()
     ])
 
+def get_vflip_transform():
+    return transforms.Compose([
+        transforms.Lambda(lambda img: TF.vflip(img)),
+        transforms.ToTensor()
+    ])
 
-translation_levels = [2, 5, 8, 10]
-rotation_levels = [2, 5, 10, 15, 20, 25]
+
+# =========================
+# Levels
+# =========================
+translation_levels = [
+    2,5,8,10,12,15,18,20,
+    22,25,28,30,32,35,38,40,
+    42,45,48,50
+]
+
+rotation_levels = [
+    2,5,10,15,20,25,30,35,
+    40,45,50,55,60,65,70,
+    75,80,85,90
+]
 
 results = []
 
 # =========================
 # Baseline
 # =========================
-dataset = datasets.MNIST("data", train=False, download=True, transform=transforms.ToTensor())
+base_transform = transforms.ToTensor()
+
+dataset = datasets.MNIST(
+    "data",
+    train=False,
+    download=True,
+    transform=base_transform
+)
+
 loader = DataLoader(dataset, batch_size=64)
 
-acc, prec, rec, f1 = evaluate(loader)
+acc, prec, rec, f1 = evaluate(model, loader, device)
 
 results.append({
     "type": "original",
@@ -111,54 +119,24 @@ results.append({
 
 
 # =========================
-# Translation X
+# Translation
 # =========================
 for shift in translation_levels:
-    dataset = datasets.MNIST("data", train=False, download=True, transform=translate_x(shift))
+    transform = get_translation_transform(shift)
+
+    dataset = datasets.MNIST(
+        "data",
+        train=False,
+        download=True,
+        transform=transform
+    )
+
     loader = DataLoader(dataset, batch_size=64)
 
-    acc, prec, rec, f1 = evaluate(loader)
+    acc, prec, rec, f1 = evaluate(model, loader, device)
 
     results.append({
-        "type": "translation_x",
-        "level": shift,
-        "accuracy": acc,
-        "precision": prec,
-        "recall": rec,
-        "f1": f1
-    })
-
-
-# =========================
-# Translation Y
-# =========================
-for shift in translation_levels:
-    dataset = datasets.MNIST("data", train=False, download=True, transform=translate_y(shift))
-    loader = DataLoader(dataset, batch_size=64)
-
-    acc, prec, rec, f1 = evaluate(loader)
-
-    results.append({
-        "type": "translation_y",
-        "level": shift,
-        "accuracy": acc,
-        "precision": prec,
-        "recall": rec,
-        "f1": f1
-    })
-
-
-# =========================
-# Translation XY
-# =========================
-for shift in translation_levels:
-    dataset = datasets.MNIST("data", train=False, download=True, transform=translate_xy(shift))
-    loader = DataLoader(dataset, batch_size=64)
-
-    acc, prec, rec, f1 = evaluate(loader)
-
-    results.append({
-        "type": "translation_xy",
+        "type": "translation",
         "level": shift,
         "accuracy": acc,
         "precision": prec,
@@ -171,10 +149,18 @@ for shift in translation_levels:
 # Rotation
 # =========================
 for angle in rotation_levels:
-    dataset = datasets.MNIST("data", train=False, download=True, transform=rotate(angle))
+    transform = get_rotation_transform(angle)
+
+    dataset = datasets.MNIST(
+        "data",
+        train=False,
+        download=True,
+        transform=transform
+    )
+
     loader = DataLoader(dataset, batch_size=64)
 
-    acc, prec, rec, f1 = evaluate(loader)
+    acc, prec, rec, f1 = evaluate(model, loader, device)
 
     results.append({
         "type": "rotation",
@@ -187,15 +173,49 @@ for angle in rotation_levels:
 
 
 # =========================
-# Flip
+# Horizontal Flip
 # =========================
-dataset = datasets.MNIST("data", train=False, download=True, transform=flip())
+hflip_transform = get_hflip_transform()
+
+dataset = datasets.MNIST(
+    "data",
+    train=False,
+    download=True,
+    transform=hflip_transform
+)
+
 loader = DataLoader(dataset, batch_size=64)
 
-acc, prec, rec, f1 = evaluate(loader)
+acc, prec, rec, f1 = evaluate(model, loader, device)
 
 results.append({
-    "type": "flip",
+    "type": "horizontal_flip",
+    "level": 1,
+    "accuracy": acc,
+    "precision": prec,
+    "recall": rec,
+    "f1": f1
+})
+
+
+# =========================
+# Vertical Flip
+# =========================
+vflip_transform = get_vflip_transform()
+
+dataset = datasets.MNIST(
+    "data",
+    train=False,
+    download=True,
+    transform=vflip_transform
+)
+
+loader = DataLoader(dataset, batch_size=64)
+
+acc, prec, rec, f1 = evaluate(model, loader, device)
+
+results.append({
+    "type": "vertical_flip",
     "level": 1,
     "accuracy": acc,
     "precision": prec,
@@ -211,56 +231,89 @@ os.makedirs("results/metrics", exist_ok=True)
 os.makedirs("results/plots", exist_ok=True)
 
 df = pd.DataFrame(results)
-df.to_csv("results/metrics/invariance_full_cnn.csv", index=False)
+
+df.to_csv(
+    "results/metrics/invariance_cnn.csv",
+    index=False
+)
 
 print(df)
 
 
 # =========================
-# Plot Translation X
+# Translation Plot
 # =========================
-plt.figure()
-df[df["type"] == "translation_x"].plot(x="level", y="accuracy", marker='o')
-plt.title("Translation X (CNN)")
-plt.savefig("results/plots/translation_x.png")
-plt.close()
-
-# =========================
-# Plot Translation Y
-# =========================
-plt.figure()
-df[df["type"] == "translation_y"].plot(x="level", y="accuracy", marker='o')
-plt.title("Translation Y (CNN)")
-plt.savefig("results/plots/translation_y.png")
-plt.close()
-
-# =========================
-# Plot Translation XY
-# =========================
-plt.figure()
-df[df["type"] == "translation_xy"].plot(x="level", y="accuracy", marker='o')
-plt.title("Translation XY (CNN)")
-plt.savefig("results/plots/translation_xy.png")
-plt.close()
-
-# =========================
-# Plot Rotation
-# =========================
-plt.figure()
-df[df["type"] == "rotation"].plot(x="level", y="accuracy", marker='o')
-plt.title("Rotation (CNN)")
-plt.savefig("results/plots/rotation.png")
-plt.close()
-
-# =========================
-# Plot Flip
-# =========================
-flip_acc = df[df["type"] == "flip"]["accuracy"].values[0]
+df_t = df[df["type"] == "translation"]
 
 plt.figure()
-plt.bar(["Flip"], [flip_acc])
-plt.title("Flip (CNN)")
-plt.savefig("results/plots/flip.png")
-plt.close()
 
-print("✅ All experiments completed and saved!")
+plt.plot(
+    df_t["level"],
+    df_t["accuracy"],
+    marker='o'
+)
+
+plt.title("CNN Translation Invariance")
+plt.xlabel("Shift (pixels)")
+plt.ylabel("Accuracy")
+
+plt.savefig("results/plots/cnn_translation.png")
+
+
+# =========================
+# Rotation Plot
+# =========================
+df_r = df[df["type"] == "rotation"]
+
+plt.figure()
+
+plt.plot(
+    df_r["level"],
+    df_r["accuracy"],
+    marker='o'
+)
+
+plt.title("CNN Rotation Invariance")
+plt.xlabel("Angle (degrees)")
+plt.ylabel("Accuracy")
+
+plt.savefig("results/plots/cnn_rotation.png")
+
+
+# =========================
+# Horizontal Flip Plot
+# =========================
+df_hf = df[df["type"] == "horizontal_flip"]
+
+plt.figure()
+
+plt.bar(
+    ["Horizontal Flip"],
+    df_hf["accuracy"]
+)
+
+plt.title("CNN Horizontal Flip Robustness")
+plt.ylabel("Accuracy")
+
+plt.savefig("results/plots/cnn_hflip.png")
+
+
+# =========================
+# Vertical Flip Plot
+# =========================
+df_vf = df[df["type"] == "vertical_flip"]
+
+plt.figure()
+
+plt.bar(
+    ["Vertical Flip"],
+    df_vf["accuracy"]
+)
+
+plt.title("CNN Vertical Flip Robustness")
+plt.ylabel("Accuracy")
+
+plt.savefig("results/plots/cnn_vflip.png")
+
+
+print("✅ CNN invariance completed!")
