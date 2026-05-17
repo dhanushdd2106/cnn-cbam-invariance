@@ -82,7 +82,7 @@ def rot(a):
         transforms.Normalize((0.5,)*3, (0.5,)*3)
     ])
 
-def flip():
+def hflip():
     return transforms.Compose([
         transforms.Lambda(lambda img: TF.hflip(img)),
         transforms.ToTensor(),
