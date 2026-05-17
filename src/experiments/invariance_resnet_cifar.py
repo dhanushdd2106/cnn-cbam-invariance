@@ -100,20 +100,27 @@ def rot(a):
         *base_transform().transforms
     ])
 
-def flip():
+def hflip():
     return transforms.Compose([
         transforms.Lambda(lambda img: TF.hflip(img)),
         *base_transform().transforms
     ])
+
+def vflip():
+    return transforms.Compose([
+        transforms.Lambda(lambda img: TF.vflip(img)),
+        *base_transform().transforms
+    ])
+    
+
 
 # =========================
 # Load HF dataset
 # =========================
 hf_dataset = load_dataset("cifar10")["test"]
 
-translation = [2, 5, 8, 10]
-rotation = [2, 5, 10, 15, 20, 25]
-
+translation = [2,5,8,10,12,15,18,20,22,25,28,30,32,35,38,40]
+rotation = [2,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90]
 results = []
 
 # =========================
@@ -166,12 +173,26 @@ for a in rotation:
     })
 
 # =========================
-# Flip
+# Horizontal Flip
 # =========================
-acc, p, r, f = evaluate(hf_dataset, flip())
+acc, p, r, f = evaluate(hf_dataset, hflip())
 
 results.append({
-    "type": "flip",
+    "type": "horizontal_flip",
+    "level": 1,
+    "accuracy": acc,
+    "precision": p,
+    "recall": r,
+    "f1": f
+})
+
+# =========================
+# Vertical Flip
+# =========================
+acc, p, r, f = evaluate(hf_dataset, vflip())
+
+results.append({
+    "type": "vertical_flip",
     "level": 1,
     "accuracy": acc,
     "precision": p,
