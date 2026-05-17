@@ -134,11 +134,37 @@ for a in rotation:
 # =========================
 # Flip
 # =========================
-ds = datasets.CIFAR10("data", train=False, download=True, transform=flip())
+# =========================
+# Horizontal Flip
+# =========================
+ds = datasets.CIFAR10("data", train=False, download=True, transform=hflip())
 loader = DataLoader(ds, batch_size=64)
 
 acc,p,r,f = evaluate(loader)
-results.append({"type":"flip","level":1,"accuracy":acc,"precision":p,"recall":r,"f1":f})
+results.append({
+    "type":"horizontal_flip",
+    "level":1,
+    "accuracy":acc,
+    "precision":p,
+    "recall":r,
+    "f1":f
+})
+
+# =========================
+# Vertical Flip
+# =========================
+ds = datasets.CIFAR10("data", train=False, download=True, transform=vflip())
+loader = DataLoader(ds, batch_size=64)
+
+acc,p,r,f = evaluate(loader)
+results.append({
+    "type":"vertical_flip",
+    "level":1,
+    "accuracy":acc,
+    "precision":p,
+    "recall":r,
+    "f1":f
+})
 
 # =========================
 # Save Results
