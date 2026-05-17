@@ -1,6 +1,20 @@
 
 import torch
 import os
+import sys
+import pandas as pd
+import matplotlib.pyplot as plt
+
+sys.path.append(os.getcwd())
+
+from torchvision import datasets, transforms
+import torchvision.transforms.functional as TF
+from torch.utils.data import DataLoader
+from sklearn.metrics import precision_score, recall_score, f1_score
+
+from src.models.cnn import CNN
+import torch
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
