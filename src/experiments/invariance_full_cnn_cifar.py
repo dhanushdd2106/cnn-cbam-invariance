@@ -88,6 +88,13 @@ def flip():
         transforms.ToTensor(),
         transforms.Normalize((0.5,)*3, (0.5,)*3)
     ])
+    
+def vflip():
+    return transforms.Compose([
+        transforms.Lambda(lambda img: TF.vflip(img)),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,)*3, (0.5,)*3)
+    ])
 
 translation = [2,5,8,10,12,15,18,20,22,25,28,30,32,35,38,40]
 rotation = [2,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90]
