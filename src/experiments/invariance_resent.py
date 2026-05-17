@@ -86,15 +86,20 @@ def rotate(angle):
         *base_transform().transforms
     ])
 
-def flip():
+def hflip():
     return transforms.Compose([
         transforms.Lambda(lambda img: TF.hflip(img)),
         *base_transform().transforms
     ])
 
+def vflip():
+    return transforms.Compose([
+        transforms.Lambda(lambda img: TF.vflip(img)),
+        *base_transform().transforms
+    ])
 
-translation_levels = [2, 5, 8, 10]
-rotation_levels = [2, 5, 10, 15, 20, 25]
+translation = [2,5,8,10,12,15,18,20,22,25,28,30,32,35,38,40]
+rotation = [2,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90]
 
 results = []
 
@@ -159,15 +164,15 @@ for angle in rotation_levels:
     })
 
 # =========================
-# Flip
+# Horizontal Flip
 # =========================
-dataset = datasets.MNIST("data", train=False, download=True, transform=flip())
+dataset = datasets.MNIST("data", train=False, download=True, transform=hflip())
 loader = DataLoader(dataset, batch_size=64)
 
 acc, prec, rec, f1 = evaluate(loader)
 
 results.append({
-    "type": "flip",
+    "type": "horizontal_flip",
     "level": 1,
     "accuracy": acc,
     "precision": prec,
@@ -175,6 +180,22 @@ results.append({
     "f1": f1
 })
 
+# =========================
+# Vertical Flip
+# =========================
+dataset = datasets.MNIST("data", train=False, download=True, transform=vflip())
+loader = DataLoader(dataset, batch_size=64)
+
+acc, prec, rec, f1 = evaluate(loader)
+
+results.append({
+    "type": "vertical_flip",
+    "level": 1,
+    "accuracy": acc,
+    "precision": prec,
+    "recall": rec,
+    "f1": f1
+})
 
 # =========================
 # Save Results
